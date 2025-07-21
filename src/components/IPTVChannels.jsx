@@ -2,6 +2,7 @@ import React from 'react';
 import { trickleListObjects, trickleDeleteObject, trickleCreateObject } from '../utils/database';
 import CORSHelper from './CORSHelper';
 import ConnectionStatus from './ConnectionStatus';
+import ChannelRatings from './ChannelRatings.js';
 
 function IPTVChannels({ user, onPlayChannel }) {
   const [subscriptions, setSubscriptions] = React.useState([]);
@@ -66,6 +67,47 @@ function IPTVChannels({ user, onPlayChannel }) {
     }
   };
 
+  // הוסף פונקציה חדשה לנסיונות חיבור עם Timeout וזיכרון שיטה מוצלחת
+  const tryConnectionMethods = async (subscription, type, progressCallback) => {
+    const methods = [
+      {
+        name: 'xtream',
+        fn: () => type === 'vod'
+          ? IPTVApi.fetchXtreamVODStreams(subscription, progressCallback)
+          : IPTVApi.fetchXtreamChannels(subscription, progressCallback)
+      },
+      {
+        name: 'm3u',
+        fn: () => IPTVApi.fetchM3UPlaylist(subscription, progressCallback)
+      }
+    ];
+    // נסה קודם את השיטה שהצליחה בפעם הקודמת
+    const lastSuccess = localStorage.getItem('iptv_last_success_method');
+    if (lastSuccess) {
+      const idx = methods.findIndex(m => m.name === lastSuccess);
+      if (idx > 0) {
+        const [method] = methods.splice(idx, 1);
+        methods.unshift(method);
+      }
+    }
+    let lastError = null;
+    for (const method of methods) {
+      try {
+        const result = await Promise.race([
+          method.fn(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 60000))
+        ]);
+        if (Array.isArray(result) && result.length > 0) {
+          localStorage.setItem('iptv_last_success_method', method.name);
+          return result;
+        }
+      } catch (err) {
+        lastError = err;
+      }
+    }
+    throw lastError || new Error('לא ניתן לטעון ערוצים מהשרת');
+  };
+
   const loadChannels = async (subscription, type = 'live') => {
     if (abortController) {
       abortController.abort();
@@ -92,55 +134,7 @@ function IPTVChannels({ user, onPlayChannel }) {
           }));
         }
       };
-      let liveStreams = [];
-      let xtreamSuccess = false;
-      try {
-        progressCallback(type === 'vod' ? 'מנסה Xtream API (VOD)...' : 'מנסה Xtream API...', 10);
-        if (type === 'vod') {
-          liveStreams = await IPTVApi.retryWithBackoff(
-            () => IPTVApi.fetchXtreamVODStreams(subscription?.objectData, progressCallback),
-            2,
-            1000
-          );
-        } else {
-          liveStreams = await IPTVApi.retryWithBackoff(
-            () => IPTVApi.fetchXtreamChannels(subscription?.objectData, progressCallback),
-            2,
-            1000
-          );
-        }
-        if (Array.isArray(liveStreams) && liveStreams.length > 0) {
-          xtreamSuccess = true;
-          console.log(`Success with Xtream API: ${liveStreams.length} items`);
-          progressCallback('הצליח עם Xtream API', 60);
-        }
-      } catch (xtreamError) {
-        console.log(`Xtream API failed: ${xtreamError.message}, trying M3U playlist`);
-      }
-      if (!xtreamSuccess) {
-        try {
-          progressCallback('מנסה M3U playlist...', 50);
-          const m3uData = await IPTVApi.retryWithBackoff(
-            () => IPTVApi.fetchM3UPlaylist(subscription?.objectData, progressCallback),
-            2,
-            1000
-          );
-          if (m3uData && typeof m3uData === 'string') {
-            liveStreams = IPTVApi.parseM3U(m3uData);
-            if (liveStreams && liveStreams.length > 0) {
-              console.log(`Success with M3U playlist: ${liveStreams.length} items`);
-              progressCallback('הצליח עם M3U playlist', 70);
-            } else {
-              throw new Error('No items parsed from M3U data');
-            }
-          } else {
-            throw new Error('Invalid M3U data format');
-          }
-        } catch (m3uError) {
-          console.log(`M3U failed: ${m3uError.message}`);
-          throw new Error('לא ניתן לטעון ערוצים מהשרת');
-        }
-      }
+      const liveStreams = await tryConnectionMethods(subscription?.objectData, type, progressCallback);
       if (newAbortController.signal.aborted) return;
       progressCallback('מעבד נתונים...', 90);
       const formattedChannels = liveStreams.map((stream, index) => {
