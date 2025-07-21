@@ -1,6 +1,7 @@
 import React from 'react';
 import { trickleListObjects, trickleDeleteObject, trickleCreateObject } from '../utils/database';
 import CORSHelper from './CORSHelper';
+import ConnectionStatus from './ConnectionStatus';
 
 function IPTVChannels({ user, onPlayChannel }) {
   const [subscriptions, setSubscriptions] = React.useState([]);
