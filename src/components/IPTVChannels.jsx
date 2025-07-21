@@ -2,7 +2,6 @@ import React from 'react';
 import { trickleListObjects, trickleDeleteObject, trickleCreateObject } from '../utils/database';
 import CORSHelper from './CORSHelper';
 import ConnectionStatus from './ConnectionStatus';
-import ChannelRatings from './ChannelRatings.js';
 
 function IPTVChannels({ user, onPlayChannel }) {
   const [subscriptions, setSubscriptions] = React.useState([]);
@@ -448,7 +447,7 @@ function IPTVChannels({ user, onPlayChannel }) {
                       <h3 className="font-semibold text-sm">{channel.name}</h3>
                       <p className="text-xs text-gray-400">{channel.category}</p>
                       <p className="text-xs text-gray-500">{channel.country}</p>
-                      <ChannelRatings channel={channel} user={user} />
+                      {/* ChannelRatings channel={channel} user={user} /> */}
                       <div className="mt-2 flex justify-between">
                         <button
                           className="text-xs bg-gray-700 hover:bg-red-600 px-2 py-1 rounded"
