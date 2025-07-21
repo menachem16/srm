@@ -56,6 +56,11 @@ export const IPTVApi = {
     return `/proxy/${encodeURIComponent(url)}`;
   },
 
+  // Helper to check if response is HTML error
+  isHtmlError: (text) => {
+    return text.trim().startsWith('<!DOCTYPE') || text.toLowerCase().includes('<html');
+  },
+
   // Fetch channels from Xtream API
   fetchXtreamChannels: async (subscription, progressCallback) => {
     if (!subscription?.url || !subscription?.username || !subscription?.password) {
@@ -67,18 +72,24 @@ export const IPTVApi = {
     const proxiedApiUrl = IPTVApi.getProxyUrl(apiUrl);
     try {
       const response = await IPTVApi.fetchWithTimeout(proxiedApiUrl, {}, 30000);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      const text = await response.text();
+      if (IPTVApi.isHtmlError(text)) {
+        throw new Error('שרת ה-IPTV לא מגיב או חוסם גישה (HTML error)');
       }
-      const data = await response.json();
-      progressCallback('קיבל נתונים מהשרת...', 40);
-      if (!data || !Array.isArray(data)) {
-        throw new Error('Invalid response from server');
+      try {
+        const data = JSON.parse(text);
+        progressCallback('קיבל נתונים מהשרת...', 40);
+        if (!data || !Array.isArray(data)) {
+          throw new Error('Invalid response from server');
+        }
+        return data;
+      } catch (jsonErr) {
+        console.error('IPTV API JSON parse error:', jsonErr, text.slice(0, 200));
+        throw new Error('שגיאה בפענוח נתוני Xtream API');
       }
-      return data;
     } catch (error) {
       console.error('IPTV API Error:', error);
-      throw new Error('לא ניתן לטעון ערוצים מהשרת');
+      throw new Error('לא ניתן לטעון ערוצים מהשרת: ' + error.message);
     }
   },
 
@@ -96,11 +107,10 @@ export const IPTVApi = {
     
     try {
       const response = await IPTVApi.fetchWithTimeout(proxiedM3uUrl, {}, 30000);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
       const m3uData = await response.text();
+      if (IPTVApi.isHtmlError(m3uData)) {
+        throw new Error('שרת ה-IPTV לא מגיב או חוסם גישה (HTML error)');
+      }
       if (!m3uData.includes('#EXTM3U')) {
         throw new Error('Invalid M3U playlist format');
       }
@@ -115,7 +125,7 @@ export const IPTVApi = {
       return processedM3U;
     } catch (error) {
       console.error('M3U Fetch Error:', error);
-      throw new Error('לא ניתן לטעון את רשימת הערוצים');
+      throw new Error('לא ניתן לטעון את רשימת הערוצים: ' + error.message);
     }
   },
 

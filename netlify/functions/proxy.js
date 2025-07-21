@@ -1,21 +1,36 @@
 // netlify/functions/proxy.js
 
-export default async (req, res) => {
-  const url = req.query.url || req.url.split('url=')[1];
+export default async (event, context) => {
+  const url = event.queryStringParameters && event.queryStringParameters.url;
   if (!url) {
-    res.status(400).send('Missing url');
-    return;
+    return {
+      statusCode: 400,
+      body: 'Missing url'
+    };
   }
   try {
     const fetchRes = await fetch(decodeURIComponent(url), { method: 'GET' });
     if (!fetchRes.ok) {
-      res.status(fetchRes.status).send('Upstream error');
-      return;
+      return {
+        statusCode: fetchRes.status,
+        body: 'Upstream error'
+      };
     }
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Content-Type', fetchRes.headers.get('content-type') || 'application/octet-stream');
-    fetchRes.body.pipe(res);
+    const contentType = fetchRes.headers.get('content-type') || 'application/octet-stream';
+    const body = await fetchRes.arrayBuffer();
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Content-Type': contentType
+      },
+      body: Buffer.from(body).toString('base64'),
+      isBase64Encoded: true
+    };
   } catch (err) {
-    res.status(500).send('Proxy error');
+    return {
+      statusCode: 500,
+      body: 'Proxy error'
+    };
   }
 }; 
