@@ -11,50 +11,69 @@ export const IPTVApi = {
     }
   },
 
-  // Try both HTTP and HTTPS
-  tryBothProtocols: async (url, options = {}, timeout = 60000) => {
-    // נסה קודם את ה-URL המקורי
+// Try both HTTP and HTTPS
+tryBothProtocols: async (url, options = {}, timeout = 60000) => {
+  const attempts = [
+    url, // נסה את ה-URL המקורי קודם
+    IPTVApi.getProxyUrl(url) // אח"כ עם proxy
+  ];
+  
+  for (const attemptUrl of attempts) {
     try {
-      const response = await IPTVApi.fetchWithTimeout(url, options, timeout);
-      return response;
+      console.log(`Trying URL: ${attemptUrl}`);
+      const response = await IPTVApi.fetchWithTimeout(attemptUrl, options, timeout);
+      
+      if (response.ok) {
+        const text = await response.text();
+        if (!IPTVApi.isHtmlError(text)) {
+          // החזר response חדש עם הטקסט
+          return new Response(text, { 
+            status: response.status, 
+            headers: response.headers 
+          });
+        }
+      }
     } catch (error) {
-      console.log('First attempt failed, trying alternative protocol...');
-      
-      // נסה את הפרוטוקול השני
-      const alternativeUrl = url.startsWith('https://') 
-        ? url.replace('https://', 'http://')
-        : url.replace('http://', 'https://');
-      
-      return await IPTVApi.fetchWithTimeout(alternativeUrl, options, timeout);
+      console.log(`Failed with ${attemptUrl}:`, error.message);
     }
-  },
+  }
+  
+  throw new Error('All connection attempts failed');
+},
 
   // Fetch with timeout
-  fetchWithTimeout: async (url, options = {}, timeout = 60000) => {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
+// Fetch with timeout
+fetchWithTimeout: async (url, options = {}, timeout = 60000) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-    try {
-      // בדוק אם זה URL של CORS-PROXY
-      const finalUrl = url.includes('cors-proxy') ? url : IPTVApi.getProxyUrl(url);
-      
-      const response = await fetch(finalUrl, {
-        ...options,
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-      return response;
-    } catch (error) {
-      clearTimeout(timeoutId);
-      throw error;
+  try {
+    console.log(`Fetching: ${url}`);
+    
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        ...options.headers
+      }
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
-  },
-
-  // Get proxy URL for HTTP resources
-  getProxyUrl: (url) => {
-    // Always use the Netlify proxy
-    return `/proxy/${encodeURIComponent(url)}`;
-  },
+    
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('Request timeout');
+    }
+    throw error;
+  }
+},
 
   // Helper to check if response is HTML error
   isHtmlError: (text) => {
