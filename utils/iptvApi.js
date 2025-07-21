@@ -11,10 +11,22 @@ const IPTVApi = {
     }
   },
 
-  // Convert HTTP to HTTPS for security
-  secureUrl: (url) => {
-    if (!url) return url;
-    return url.replace(/^http:\/\//, 'https://');
+  // Try both HTTP and HTTPS
+  tryBothProtocols: async (url, options = {}, timeout = 60000) => {
+    // נסה קודם את ה-URL המקורי
+    try {
+      const response = await IPTVApi.fetchWithTimeout(url, options, timeout);
+      return response;
+    } catch (error) {
+      console.log('First attempt failed, trying alternative protocol...');
+      
+      // נסה את הפרוטוקול השני
+      const alternativeUrl = url.startsWith('https://') 
+        ? url.replace('https://', 'http://')
+        : url.replace('http://', 'https://');
+      
+      return await IPTVApi.fetchWithTimeout(alternativeUrl, options, timeout);
+    }
   },
 
   // Fetch with timeout
@@ -23,7 +35,10 @@ const IPTVApi = {
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
     try {
-      const response = await fetch(url, {
+      // בדוק אם זה URL של CORS-PROXY
+      const finalUrl = url.includes('cors-proxy') ? url : IPTVApi.getProxyUrl(url);
+      
+      const response = await fetch(finalUrl, {
         ...options,
         signal: controller.signal
       });
@@ -35,6 +50,15 @@ const IPTVApi = {
     }
   },
 
+  // Get proxy URL for HTTP resources
+  getProxyUrl: (url) => {
+    if (url.startsWith('https://')) return url;
+    
+    // השתמש ב-CORS Proxy עבור בקשות HTTP
+    const corsProxy = 'https://api.allorigins.win/raw?url=';
+    return `${corsProxy}${encodeURIComponent(url)}`;
+  },
+
   // Fetch channels from Xtream API
   fetchXtreamChannels: async (subscription, progressCallback) => {
     if (!subscription?.url || !subscription?.username || !subscription?.password) {
@@ -43,22 +67,27 @@ const IPTVApi = {
 
     progressCallback('מתחבר לשרת Xtream API...', 20);
     
-    const baseUrl = IPTVApi.secureUrl(subscription.url.replace(/\/$/, ''));
+    const baseUrl = subscription.url.replace(/\/$/, '');
     const apiUrl = `${baseUrl}/player_api.php?username=${subscription.username}&password=${subscription.password}&action=get_live_categories`;
     
-    const response = await IPTVApi.fetchWithTimeout(apiUrl);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    progressCallback('קיבל נתונים מהשרת...', 40);
-    
-    if (!data || !Array.isArray(data)) {
-      throw new Error('Invalid response from server');
-    }
+    try {
+      const response = await IPTVApi.tryBothProtocols(apiUrl);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      progressCallback('קיבל נתונים מהשרת...', 40);
+      
+      if (!data || !Array.isArray(data)) {
+        throw new Error('Invalid response from server');
+      }
 
-    return data;
+      return data;
+    } catch (error) {
+      console.error('IPTV API Error:', error);
+      throw new Error('לא ניתן לטעון ערוצים מהשרת');
+    }
   },
 
   // Fetch M3U playlist
@@ -69,21 +98,32 @@ const IPTVApi = {
 
     progressCallback('מוריד רשימת M3U...', 30);
     
-    const baseUrl = IPTVApi.secureUrl(subscription.url.replace(/\/$/, ''));
+    const baseUrl = subscription.url.replace(/\/$/, '');
     const m3uUrl = `${baseUrl}/get.php?username=${subscription.username}&password=${subscription.password}&type=m3u_plus&output=ts`;
     
-    const response = await IPTVApi.fetchWithTimeout(m3uUrl);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    
-    const m3uData = await response.text();
-    if (!m3uData.includes('#EXTM3U')) {
-      throw new Error('Invalid M3U playlist format');
-    }
+    try {
+      const response = await IPTVApi.tryBothProtocols(m3uUrl);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const m3uData = await response.text();
+      if (!m3uData.includes('#EXTM3U')) {
+        throw new Error('Invalid M3U playlist format');
+      }
 
-    progressCallback('עיבוד רשימת M3U...', 60);
-    return m3uData;
+      // המר את כל כתובות ה-HTTP ל-HTTPS או דרך ה-proxy
+      const processedM3U = m3uData.replace(
+        /(https?:\/\/[^\s]+)/g,
+        url => url.startsWith('https://') ? url : IPTVApi.getProxyUrl(url)
+      );
+
+      progressCallback('עיבוד רשימת M3U...', 60);
+      return processedM3U;
+    } catch (error) {
+      console.error('M3U Fetch Error:', error);
+      throw new Error('לא ניתן לטעון את רשימת הערוצים');
+    }
   },
 
   // Parse M3U playlist
