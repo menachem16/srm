@@ -154,18 +154,16 @@ export const IPTVApi = {
     if (!subscription?.url || !subscription?.username || !subscription?.password) {
       throw new Error('Missing subscription credentials');
     }
-
     const baseUrl = subscription.url.replace(/\/$/, '');
-    
+    let url = '';
     if (type === 'live') {
-      return `${baseUrl}/live/${subscription.username}/${subscription.password}/${streamId}.ts`;
+      url = `${baseUrl}/live/${subscription.username}/${subscription.password}/${streamId}.ts`;
     } else if (type === 'vod') {
-      return `${baseUrl}/movie/${subscription.username}/${subscription.password}/${streamId}.mp4`;
+      url = `${baseUrl}/movie/${subscription.username}/${subscription.password}/${streamId}.mp4`;
     } else if (type === 'series') {
-      return `${baseUrl}/series/${subscription.username}/${subscription.password}/${streamId}.mp4`;
+      url = `${baseUrl}/series/${subscription.username}/${subscription.password}/${streamId}.mp4`;
     }
-    
-    return '';
+    return `/proxy/${encodeURIComponent(url)}`;
   },
 
   // Get live categories

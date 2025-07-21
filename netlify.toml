@@ -21,5 +21,10 @@
   to = "/index.html"
   status = 200
 
+[[redirects]]
+  from = "/proxy/*"
+  to = "/.netlify/functions/proxy?url=:splat"
+  status = 200
+
 [settings]
   clean_urls = true
