@@ -2,7 +2,7 @@ import React from 'react';
 import { trickleListObjects, trickleDeleteObject, trickleCreateObject } from '../utils/database';
 import CORSHelper from './CORSHelper';
 import ConnectionStatus from './ConnectionStatus';
-import { IPTVApi } from '../utils/iptvApi.jsx';
+import { tryAllConnectionMethods, IPTVApi } from '../utils/iptvApi.jsx';
 
 function IPTVChannels({ user, onPlayChannel }) {
   const [subscriptions, setSubscriptions] = React.useState([]);
@@ -68,45 +68,7 @@ function IPTVChannels({ user, onPlayChannel }) {
   };
 
   // הוסף פונקציה חדשה לנסיונות חיבור עם Timeout וזיכרון שיטה מוצלחת
-  const tryConnectionMethods = async (subscription, type, progressCallback) => {
-    const methods = [
-      {
-        name: 'xtream',
-        fn: () => type === 'vod'
-          ? IPTVApi.fetchXtreamVODStreams(subscription, progressCallback)
-          : IPTVApi.fetchXtreamChannels(subscription, progressCallback)
-      },
-      {
-        name: 'm3u',
-        fn: () => IPTVApi.fetchM3UPlaylist(subscription, progressCallback)
-      }
-    ];
-    // נסה קודם את השיטה שהצליחה בפעם הקודמת
-    const lastSuccess = localStorage.getItem('iptv_last_success_method');
-    if (lastSuccess) {
-      const idx = methods.findIndex(m => m.name === lastSuccess);
-      if (idx > 0) {
-        const [method] = methods.splice(idx, 1);
-        methods.unshift(method);
-      }
-    }
-    let lastError = null;
-    for (const method of methods) {
-      try {
-        const result = await Promise.race([
-          method.fn(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 60000))
-        ]);
-        if (Array.isArray(result) && result.length > 0) {
-          localStorage.setItem('iptv_last_success_method', method.name);
-          return result;
-        }
-      } catch (err) {
-        lastError = err;
-      }
-    }
-    throw lastError || new Error('לא ניתן לטעון ערוצים מהשרת');
-  };
+  // הסר את tryConnectionMethods (הפונקציה הישנה)
 
   const loadChannels = async (subscription, type = 'live') => {
     if (abortController) {
@@ -134,7 +96,8 @@ function IPTVChannels({ user, onPlayChannel }) {
           }));
         }
       };
-      const liveStreams = await tryConnectionMethods(subscription?.objectData, type, progressCallback);
+      // השתמש בפונקציה החדשה
+      const liveStreams = await tryAllConnectionMethods(subscription?.objectData, type, progressCallback);
       if (newAbortController.signal.aborted) return;
       progressCallback('מעבד נתונים...', 90);
       const formattedChannels = liveStreams.map((stream, index) => {

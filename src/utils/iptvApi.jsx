@@ -64,25 +64,19 @@ export const IPTVApi = {
     if (!subscription?.url || !subscription?.username || !subscription?.password) {
       throw new Error('Missing subscription credentials');
     }
-
     progressCallback('מתחבר לשרת Xtream API...', 20);
-    
     const baseUrl = subscription.url.replace(/\/$/, '');
-    const apiUrl = `${baseUrl}/player_api.php?username=${subscription.username}&password=${subscription.password}&action=get_live_categories`;
-    
+    const apiUrl = `${baseUrl}/player_api.php?username=${subscription.username}&password=${subscription.password}&action=get_live_streams`;
     try {
       const response = await IPTVApi.tryBothProtocols(apiUrl);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
-      
       const data = await response.json();
       progressCallback('קיבל נתונים מהשרת...', 40);
-      
       if (!data || !Array.isArray(data)) {
         throw new Error('Invalid response from server');
       }
-
       return data;
     } catch (error) {
       console.error('IPTV API Error:', error);
@@ -204,3 +198,59 @@ export const IPTVApi = {
     }
   }
 };
+
+// פונקציה מרכזית: נסה את כל שיטות החיבור במקביל ובחר את המוצלחת ביותר
+export async function tryAllConnectionMethods(subscription, type = 'live', progressCallback) {
+  const methods = [
+    {
+      name: 'xtream',
+      fn: async () => {
+        const data = await IPTVApi.fetchXtreamChannels(subscription, progressCallback);
+        return Array.isArray(data) ? data : [];
+      }
+    },
+    {
+      name: 'm3u',
+      fn: async () => {
+        const m3uRaw = await IPTVApi.fetchM3UPlaylist(subscription, progressCallback);
+        return IPTVApi.parseM3U(m3uRaw);
+      }
+    }
+    // אפשר להוסיף כאן Proxy, VOD וכו' בעתיד
+  ];
+  // נסה קודם את השיטה שהצליחה בפעם הקודמת
+  const lastSuccess = localStorage.getItem('iptv_last_success_method');
+  if (lastSuccess) {
+    const idx = methods.findIndex(m => m.name === lastSuccess);
+    if (idx > 0) {
+      const [method] = methods.splice(idx, 1);
+      methods.unshift(method);
+    }
+  }
+  // הרץ את כל השיטות במקביל עם timeout של 30 שניות
+  const results = await Promise.allSettled(
+    methods.map(m =>
+      Promise.race([
+        m.fn(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 30000))
+      ]).then(
+        res => ({ name: m.name, data: res }),
+        err => ({ name: m.name, error: err })
+      )
+    )
+  );
+  // סנן הצלחות
+  const successes = results
+    .filter(r => r.value && r.value.data && Array.isArray(r.value.data) && r.value.data.length > 0)
+    .map(r => r.value);
+  if (successes.length > 0) {
+    // שמור את השיטה המוצלחת
+    localStorage.setItem('iptv_last_success_method', successes[0].name);
+    return successes[0].data;
+  }
+  // אם אין הצלחות — זרוק שגיאה עם כל השגיאות
+  throw new Error(
+    'לא ניתן לטעון ערוצים:\n' +
+      results.map(r => `${r.value?.name || ''}: ${r.value?.error || r.reason}`).join('\n')
+  );
+}
