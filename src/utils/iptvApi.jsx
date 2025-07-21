@@ -52,11 +52,8 @@ export const IPTVApi = {
 
   // Get proxy URL for HTTP resources
   getProxyUrl: (url) => {
-    if (url.startsWith('https://')) return url;
-    
-    // השתמש ב-CORS Proxy עבור בקשות HTTP
-    const corsProxy = 'https://api.allorigins.win/raw?url=';
-    return `${corsProxy}${encodeURIComponent(url)}`;
+    // Always use the Netlify proxy
+    return `/proxy/${encodeURIComponent(url)}`;
   },
 
   // Fetch channels from Xtream API
@@ -67,8 +64,9 @@ export const IPTVApi = {
     progressCallback('מתחבר לשרת Xtream API...', 20);
     const baseUrl = subscription.url.replace(/\/$/, '');
     const apiUrl = `${baseUrl}/player_api.php?username=${subscription.username}&password=${subscription.password}&action=get_live_streams`;
+    const proxiedApiUrl = IPTVApi.getProxyUrl(apiUrl);
     try {
-      const response = await IPTVApi.tryBothProtocols(apiUrl);
+      const response = await IPTVApi.fetchWithTimeout(proxiedApiUrl, {}, 30000);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
@@ -94,9 +92,10 @@ export const IPTVApi = {
     
     const baseUrl = subscription.url.replace(/\/$/, '');
     const m3uUrl = `${baseUrl}/get.php?username=${subscription.username}&password=${subscription.password}&type=m3u_plus&output=ts`;
+    const proxiedM3uUrl = IPTVApi.getProxyUrl(m3uUrl);
     
     try {
-      const response = await IPTVApi.tryBothProtocols(m3uUrl);
+      const response = await IPTVApi.fetchWithTimeout(proxiedM3uUrl, {}, 30000);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }

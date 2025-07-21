@@ -239,6 +239,14 @@ function IPTVChannels({ user, onPlayChannel }) {
     }
   };
 
+  const formatLogoUrl = (logo) => {
+    if (!logo) return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA4MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjQwIiB5PSIzNSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+VFY8L3RleHQ+Cjwvc3ZnPgo=';
+    if (logo.startsWith('http://')) {
+      return `/proxy/${encodeURIComponent(logo)}`;
+    }
+    return logo;
+  };
+
   try {
     if (!user) {
       return (
@@ -397,7 +405,7 @@ function IPTVChannels({ user, onPlayChannel }) {
                     onClick={() => handlePlayChannel(channel)}
                   >
                     <img
-                      src={channel.logo || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA4MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjQwIiB5PSIzNSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+VFY8L3RleHQ+Cjwvc3ZnPgo='}
+                      src={formatLogoUrl(channel.logo)}
                       alt={channel.name}
                       className="w-full h-32 object-cover"
                       onError={(e) => {
