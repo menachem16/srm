@@ -1,5 +1,3 @@
-import { trickleListObjects, trickleCreateObject, trickleUpdateObject, trickleDeleteObject } from '../utils/database';
-
 function AdvancedRecommendations({ user, onPlayChannel }) {
   const [recommendations, setRecommendations] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
@@ -32,8 +30,8 @@ function AdvancedRecommendations({ user, onPlayChannel }) {
   const generateSmartRecommendations = async () => {
     try {
       const [favorites, ratings] = await Promise.all([
-        trickleListObjects(`iptv_favorites:${user.objectId}`, 10, true),
-        trickleListObjects(`user_ratings:${user.objectId}`, 10, true)
+        window.trickleListObjects(`iptv_favorites:${user.objectId}`, 10, true),
+        window.trickleListObjects(`user_ratings:${user.objectId}`, 10, true)
       ]);
       
       if (favorites.items?.length === 0 && ratings.items?.length === 0) {
@@ -61,7 +59,7 @@ function AdvancedRecommendations({ user, onPlayChannel }) {
 
   const generateTrendingRecommendations = async () => {
     try {
-      const ratingsData = await trickleListObjects('channel_ratings', 50, true);
+      const ratingsData = await window.trickleListObjects('channel_ratings', 50, true);
       if (ratingsData && ratingsData.items && ratingsData.items.length > 0) {
         const channelRatings = {};
         ratingsData.items.forEach(rating => {
@@ -100,7 +98,7 @@ function AdvancedRecommendations({ user, onPlayChannel }) {
 
   const generatePersonalizedRecommendations = async () => {
     try {
-      const favorites = await trickleListObjects(`iptv_favorites:${user.objectId}`, 10, true);
+      const favorites = await window.trickleListObjects(`iptv_favorites:${user.objectId}`, 10, true);
       if (favorites && favorites.items && favorites.items.length > 0) {
         const favoriteCategories = favorites.items.map(f => f.objectData.category);
         const uniqueCategories = [...new Set(favoriteCategories)];

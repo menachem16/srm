@@ -1,6 +1,3 @@
-import { trickleListObjects, trickleCreateObject, trickleUpdateObject, trickleDeleteObject } from '../utils/database';
-import AuthUtils from '../utils/auth';
-
 function AuthModal({ onClose, onLogin }) {
   const [isLogin, setIsLogin] = React.useState(true);
   const [formData, setFormData] = React.useState({

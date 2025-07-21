@@ -1,5 +1,3 @@
-import { trickleListObjects, trickleCreateObject, trickleUpdateObject, trickleDeleteObject } from '../utils/database';
-
 function AdminPanel({ user }) {
   const [stats, setStats] = React.useState({});
   const [users, setUsers] = React.useState([]);
@@ -15,8 +13,8 @@ function AdminPanel({ user }) {
     try {
       setLoading(true);
       const [usersData, ratingsData] = await Promise.all([
-        trickleListObjects('user', 20, true),
-        trickleListObjects('channel_ratings', 50, true)
+        window.trickleListObjects('user', 20, true),
+        window.trickleListObjects('channel_ratings', 50, true)
       ]);
       
       setUsers(usersData.items || []);
@@ -43,7 +41,7 @@ function AdminPanel({ user }) {
   const toggleUserStatus = async (userId, currentStatus) => {
     try {
       const userData = users.find(u => u.objectId === userId);
-      await trickleUpdateObject('user', userId, {
+      await window.trickleUpdateObject('user', userId, {
         ...userData.objectData,
         isActive: !currentStatus
       });

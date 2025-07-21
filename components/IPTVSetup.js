@@ -1,5 +1,3 @@
-import { trickleListObjects, trickleCreateObject, trickleUpdateObject, trickleDeleteObject } from '../utils/database';
-
 function IPTVSetup({ user }) {
   const [formData, setFormData] = React.useState({
     subscriptionName: '',
@@ -15,7 +13,7 @@ function IPTVSetup({ user }) {
     setLoading(true);
 
     try {
-      await trickleCreateObject(`iptv_subscription:${user.objectId}`, {
+      await window.trickleCreateObject(`iptv_subscription:${user.objectId}`, {
         userId: user.objectId,
         subscriptionName: formData.subscriptionName,
         username: formData.username,

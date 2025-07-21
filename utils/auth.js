@@ -1,6 +1,4 @@
-import { trickleListObjects, trickleCreateObject, trickleUpdateObject, trickleDeleteObject } from './database';
-
-const AuthUtils = {
+window.AuthUtils = {
   // Simple encryption for credentials (basic security)
   encrypt: (text) => {
     return btoa(text);
@@ -29,7 +27,7 @@ const AuthUtils = {
   },
 
   // רישום משתמש חדש עם validation משופר
-  register: async (userData) => {
+  register: async function(userData) {
     try {
       // Validate input
       if (!userData.email || !userData.password || !userData.name) {
@@ -39,14 +37,14 @@ const AuthUtils = {
         };
       }
 
-      if (!AuthUtils.validateEmail(userData.email)) {
+      if (!this.validateEmail(userData.email)) {
         return {
           success: false,
           error: 'כתובת אימייל לא תקינה'
         };
       }
 
-      const passwordValidation = AuthUtils.validatePassword(userData.password);
+      const passwordValidation = this.validatePassword(userData.password);
       if (!passwordValidation.valid) {
         return {
           success: false,
@@ -55,7 +53,7 @@ const AuthUtils = {
       }
 
       // Check if user already exists
-      const existingUsers = await trickleListObjects('user', 100, false);
+      const existingUsers = await window.trickleListObjects('user', 100, false);
       const userExists = existingUsers.items.some(u => u.objectData.email === userData.email);
       
       if (userExists) {
@@ -65,9 +63,9 @@ const AuthUtils = {
         };
       }
 
-      const user = await trickleCreateObject('user', {
+      const user = await window.trickleCreateObject('user', {
         email: userData.email,
-        password: AuthUtils.encrypt(userData.password),
+        password: this.encrypt(userData.password),
         name: userData.name.trim(),
         createdAt: new Date().toISOString(),
         isActive: true
@@ -87,7 +85,7 @@ const AuthUtils = {
   },
 
   // כניסה למערכת עם validation משופר
-  login: async (email, password) => {
+  login: async function(email, password) {
     try {
       if (!email || !password) {
         return {
@@ -96,17 +94,17 @@ const AuthUtils = {
         };
       }
 
-      if (!AuthUtils.validateEmail(email)) {
+      if (!this.validateEmail(email)) {
         return {
           success: false,
           error: 'כתובת אימייל לא תקינה'
         };
       }
 
-      const users = await trickleListObjects('user', 100, false);
+      const users = await window.trickleListObjects('user', 100, false);
       const user = users.items.find(u => 
         u.objectData.email === email && 
-        AuthUtils.decrypt(u.objectData.password) === password &&
+        this.decrypt(u.objectData.password) === password &&
         u.objectData.isActive
       );
 

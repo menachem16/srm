@@ -1,4 +1,4 @@
-import { trickleListObjects, trickleCreateObject, trickleUpdateObject, trickleDeleteObject } from '../utils/database';
+// אין צורך ב-import, כל הפונקציות זמינות גלובלית
 
 function EnhancedAuth({ isOpen, mode, onClose, onSuccess }) {
   const [formData, setFormData] = React.useState({
@@ -62,7 +62,7 @@ function EnhancedAuth({ isOpen, mode, onClose, onSuccess }) {
 
     try {
       if (mode === 'register') {
-        const existingUsers = await trickleListObjects('users', 100, true);
+        const existingUsers = window.trickleListObjects('users', 100, true);
         const userExists = existingUsers.items.some(u => u.objectData.email === formData.email);
         
         if (userExists) {
@@ -70,7 +70,7 @@ function EnhancedAuth({ isOpen, mode, onClose, onSuccess }) {
           return;
         }
 
-        const newUser = await trickleCreateObject('users', {
+        const newUser = window.trickleCreateObject('users', {
           name: formData.name,
           email: formData.email,
           password: formData.password,
@@ -83,7 +83,7 @@ function EnhancedAuth({ isOpen, mode, onClose, onSuccess }) {
         
         onSuccess(newUser.objectData);
       } else {
-        const users = await trickleListObjects('users', 100, true);
+        const users = window.trickleListObjects('users', 100, true);
         const user = users.items.find(u => 
           u.objectData.email === formData.email && 
           u.objectData.password === formData.password
@@ -94,7 +94,7 @@ function EnhancedAuth({ isOpen, mode, onClose, onSuccess }) {
           return;
         }
 
-        await trickleUpdateObject('users', user.objectId, {
+        await window.trickleUpdateObject('users', user.objectId, {
           ...user.objectData,
           last_login: new Date().toISOString()
         });

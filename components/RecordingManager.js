@@ -1,4 +1,4 @@
-import { trickleListObjects, trickleCreateObject, trickleUpdateObject, trickleDeleteObject } from '../utils/database';
+// אין צורך ב-import, כל הפונקציות זמינות גלובלית
 
 function RecordingManager({ user }) {
   const [recordings, setRecordings] = React.useState([]);
@@ -15,7 +15,7 @@ function RecordingManager({ user }) {
 
   const loadRecordings = async () => {
     try {
-      const recordingsData = await trickleListObjects(`recordings:${user.objectId}`, 100, true);
+      const recordingsData = await window.trickleListObjects(`recordings:${user.objectId}`, 100, true);
       setRecordings(recordingsData.items);
     } catch (error) {
       console.error('Error loading recordings:', error);
@@ -25,7 +25,7 @@ function RecordingManager({ user }) {
   const loadScheduledRecordings = async () => {
     try {
       setLoading(true);
-      const scheduledData = await trickleListObjects(`scheduled_recordings:${user.objectId}`, 100, true);
+      const scheduledData = await window.trickleListObjects(`scheduled_recordings:${user.objectId}`, 100, true);
       setScheduledRecordings(scheduledData.items);
     } catch (error) {
       console.error('Error loading scheduled recordings:', error);
@@ -37,7 +37,7 @@ function RecordingManager({ user }) {
   const deleteRecording = async (recordingId) => {
     if (confirm('האם אתה בטוח שברצונך למחוק הקלטה זו?')) {
       try {
-        await trickleDeleteObject(`recordings:${user.objectId}`, recordingId);
+        await window.trickleDeleteObject(`recordings:${user.objectId}`, recordingId);
         loadRecordings();
       } catch (error) {
         console.error('Error deleting recording:', error);
@@ -47,7 +47,7 @@ function RecordingManager({ user }) {
 
   const cancelScheduledRecording = async (scheduleId) => {
     try {
-      await trickleDeleteObject(`scheduled_recordings:${user.objectId}`, scheduleId);
+      await window.trickleDeleteObject(`scheduled_recordings:${user.objectId}`, scheduleId);
       loadScheduledRecordings();
     } catch (error) {
       console.error('Error canceling recording:', error);
@@ -178,7 +178,7 @@ function ScheduleRecordingModal({ user, onClose, onSuccess }) {
     e.preventDefault();
     try {
       const scheduledTime = new Date(`${formData.date}T${formData.time}`);
-      await trickleCreateObject(`scheduled_recordings:${user.objectId}`, {
+      await window.trickleCreateObject(`scheduled_recordings:${user.objectId}`, {
         userId: user.objectId,
         title: formData.title,
         channel: formData.channel,

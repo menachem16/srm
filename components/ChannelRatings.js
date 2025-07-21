@@ -1,5 +1,3 @@
-import { trickleListObjects, trickleCreateObject, trickleUpdateObject, trickleDeleteObject } from '../utils/database';
-
 function ChannelRatings({ channel, user }) {
   const [rating, setRating] = React.useState(0);
   const [userRating, setUserRating] = React.useState(0);
@@ -17,7 +15,7 @@ function ChannelRatings({ channel, user }) {
       // Add delay to prevent rate limiting
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      const ratingsData = await trickleListObjects(`channel_ratings:${channel.id}`, 10, true);
+      const ratingsData = await window.trickleListObjects(`channel_ratings:${channel.id}`, 10, true);
       
       if (ratingsData && ratingsData.items && ratingsData.items.length > 0) {
         const avgRating = ratingsData.items.reduce((sum, r) => sum + (r.objectData?.rating || 0), 0) / ratingsData.items.length;
@@ -27,7 +25,7 @@ function ChannelRatings({ channel, user }) {
       
       // Load user rating separately with another delay
       await new Promise(resolve => setTimeout(resolve, 100));
-      const userRatingData = await trickleListObjects(`user_ratings:${user.objectId}`, 10, true);
+      const userRatingData = await window.trickleListObjects(`user_ratings:${user.objectId}`, 10, true);
       
       if (userRatingData && userRatingData.items) {
         const existingRating = userRatingData.items.find(r => r.objectData?.channelId === channel.id);
@@ -49,7 +47,7 @@ function ChannelRatings({ channel, user }) {
       // Add delay to prevent rate limiting
       await new Promise(resolve => setTimeout(resolve, 200));
       
-      await trickleCreateObject(`channel_ratings:${channel.id}`, {
+      await window.trickleCreateObject(`channel_ratings:${channel.id}`, {
         channelId: channel.id,
         channelName: channel.name,
         userId: user.objectId,
@@ -60,7 +58,7 @@ function ChannelRatings({ channel, user }) {
       // Add delay between operations
       await new Promise(resolve => setTimeout(resolve, 200));
       
-      await trickleCreateObject(`user_ratings:${user.objectId}`, {
+      await window.trickleCreateObject(`user_ratings:${user.objectId}`, {
         userId: user.objectId,
         channelId: channel.id,
         rating: newRating,

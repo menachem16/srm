@@ -1,4 +1,4 @@
-import { trickleListObjects, trickleCreateObject, trickleUpdateObject, trickleDeleteObject } from '../utils/database';
+// אין צורך ב-import, כל הפונקציות זמינות גלובלית
 
 function IPTVChannels({ user, onPlayChannel }) {
   const [subscriptions, setSubscriptions] = React.useState([]);
@@ -35,7 +35,7 @@ function IPTVChannels({ user, onPlayChannel }) {
 
   const loadSubscriptions = async () => {
     try {
-      const subsData = await trickleListObjects(`iptv_subscription:${user.objectId}`, 10, true);
+      const subsData = await window.trickleListObjects(`iptv_subscription:${user.objectId}`, 10, true);
       const activeSubscriptions = subsData.items.filter(s => s.objectData.isActive);
       setSubscriptions(activeSubscriptions);
       
@@ -50,7 +50,7 @@ function IPTVChannels({ user, onPlayChannel }) {
   const deleteSubscription = async (subscriptionId) => {
     if (confirm('האם אתה בטוח שברצונך למחוק מנוי זה?')) {
       try {
-        await trickleDeleteObject(`iptv_subscription:${user.objectId}`, subscriptionId);
+        await window.trickleDeleteObject(`iptv_subscription:${user.objectId}`, subscriptionId);
         await loadSubscriptions();
         if (selectedSubscription?.objectId === subscriptionId) {
           setSelectedSubscription(null);
@@ -248,7 +248,7 @@ function IPTVChannels({ user, onPlayChannel }) {
       // Add delay to prevent rate limiting
       await new Promise(resolve => setTimeout(resolve, 300));
       
-      const existingFavorites = await trickleListObjects(`iptv_favorites:${user.objectId}`, 20, true);
+      const existingFavorites = await window.trickleListObjects(`iptv_favorites:${user.objectId}`, 20, true);
       
       if (existingFavorites && existingFavorites.items) {
         const alreadyFavorite = existingFavorites.items.some(fav => fav.objectData?.id === channel.id);
@@ -260,7 +260,7 @@ function IPTVChannels({ user, onPlayChannel }) {
       }
 
       await new Promise(resolve => setTimeout(resolve, 200));
-      await trickleCreateObject(`iptv_favorites:${user.objectId}`, {
+      await window.trickleCreateObject(`iptv_favorites:${user.objectId}`, {
         userId: user.objectId,
         id: channel.id,
         name: channel.name,
@@ -289,7 +289,7 @@ function IPTVChannels({ user, onPlayChannel }) {
 
     try {
       const scheduledTime = new Date(`${date}T${time}`);
-      await trickleCreateObject(`scheduled_recordings:${user.objectId}`, {
+      await window.trickleCreateObject(`scheduled_recordings:${user.objectId}`, {
         userId: user.objectId,
         title: title,
         channel: channel.name,
