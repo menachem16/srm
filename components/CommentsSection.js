@@ -1,0 +1,143 @@
+import { trickleListObjects, trickleCreateObject, trickleUpdateObject, trickleDeleteObject } from '../utils/database';
+
+function CommentsSection({ contentId, user }) {
+  const [comments, setComments] = React.useState([]);
+  const [newComment, setNewComment] = React.useState('');
+  const [replyTo, setReplyTo] = React.useState(null);
+
+  React.useEffect(() => {
+    loadComments();
+  }, [contentId]);
+
+  const loadComments = async () => {
+    try {
+      const commentsData = await trickleListObjects(`comments:${contentId}`, 100, true);
+      setComments(commentsData.items);
+    } catch (error) {
+      console.error('Error loading comments:', error);
+    }
+  };
+
+  const submitComment = async (e) => {
+    e.preventDefault();
+    if (!newComment.trim() || !user) return;
+
+    try {
+      await trickleCreateObject(`comments:${contentId}`, {
+        userId: user.objectId,
+        userName: user.name,
+        contentId: contentId,
+        comment: newComment,
+        parentId: replyTo?.objectId || null,
+        likes: 0
+      });
+      
+      setNewComment('');
+      setReplyTo(null);
+      loadComments();
+    } catch (error) {
+      console.error('Error submitting comment:', error);
+    }
+  };
+
+  const likeComment = async (commentId) => {
+    try {
+      const comment = comments.find(c => c.objectId === commentId);
+      if (comment) {
+        await trickleUpdateObject(`comments:${contentId}`, commentId, {
+          ...comment.objectData,
+          likes: comment.objectData.likes + 1
+        });
+        loadComments();
+      }
+    } catch (error) {
+      console.error('Error liking comment:', error);
+    }
+  };
+
+  try {
+    const mainComments = comments.filter(c => !c.objectData.parentId);
+    const getReplies = (parentId) => comments.filter(c => c.objectData.parentId === parentId);
+
+    return (
+      <div className="mt-8" data-name="comments-section" data-file="components/CommentsSection.js">
+        <h3 className="text-xl font-bold mb-4">תגובות ({comments.length})</h3>
+        
+        {user && (
+          <form onSubmit={submitComment} className="mb-6">
+            {replyTo && (
+              <div className="bg-gray-700 p-2 rounded mb-2 text-sm">
+                מגיב ל-{replyTo.objectData.userName}
+                <button 
+                  type="button" 
+                  className="text-red-500 mr-2"
+                  onClick={() => setReplyTo(null)}
+                >
+                  ביטול
+                </button>
+              </div>
+            )}
+            <div className="flex space-x-3">
+              <textarea
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="כתוב תגובה..."
+                className="flex-1 px-3 py-2 bg-gray-800 border border-gray-700 rounded resize-none"
+                rows="3"
+              />
+              <button type="submit" className="btn-primary self-start">
+                שלח
+              </button>
+            </div>
+          </form>
+        )}
+
+        <div className="space-y-4">
+          {mainComments.map((comment) => (
+            <div key={comment.objectId} className="bg-gray-800 p-4 rounded">
+              <div className="flex justify-between items-start mb-2">
+                <div className="font-semibold">{comment.objectData.userName}</div>
+                <div className="text-xs text-gray-500">
+                  {new Date(comment.createdAt).toLocaleDateString('he-IL')}
+                </div>
+              </div>
+              <p className="text-gray-300 mb-3">{comment.objectData.comment}</p>
+              <div className="flex items-center space-x-4 text-sm">
+                <button 
+                  className="flex items-center text-gray-400 hover:text-white"
+                  onClick={() => likeComment(comment.objectId)}
+                >
+                  <div className="icon-heart text-sm ml-1"></div>
+                  {comment.objectData.likes}
+                </button>
+                {user && (
+                  <button 
+                    className="text-gray-400 hover:text-white"
+                    onClick={() => setReplyTo(comment)}
+                  >
+                    השב
+                  </button>
+                )}
+              </div>
+              
+              {getReplies(comment.objectId).map((reply) => (
+                <div key={reply.objectId} className="mr-8 mt-3 bg-gray-700 p-3 rounded">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="font-semibold text-sm">{reply.objectData.userName}</div>
+                    <div className="text-xs text-gray-500">
+                      {new Date(reply.createdAt).toLocaleDateString('he-IL')}
+                    </div>
+                  </div>
+                  <p className="text-gray-300 text-sm">{reply.objectData.comment}</p>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  } catch (error) {
+    console.error('CommentsSection component error:', error);
+    return null;
+  }
+}

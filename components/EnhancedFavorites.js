@@ -1,0 +1,212 @@
+import { trickleListObjects, trickleCreateObject, trickleUpdateObject, trickleDeleteObject } from '../utils/database';
+
+function EnhancedFavorites({ user, onPlayContent }) {
+  const [activeTab, setActiveTab] = React.useState('favorites');
+  const [favorites, setFavorites] = React.useState([]);
+  const [watchlist, setWatchlist] = React.useState([]);
+  const [collections, setCollections] = React.useState([]);
+  const [content, setContent] = React.useState([]);
+  const [showCreateCollection, setShowCreateCollection] = React.useState(false);
+
+  React.useEffect(() => {
+    if (user) {
+      loadUserLists();
+      loadContent();
+      loadCollections();
+    }
+  }, [user]);
+
+  const loadUserLists = async () => {
+    try {
+      const userFavorites = await trickleListObjects(`favorites:${user.objectId}`, 100, true);
+      const favItems = userFavorites.items.filter(item => item.objectData.type === 'favorites');
+      const watchItems = userFavorites.items.filter(item => item.objectData.type === 'watchlist');
+      setFavorites(favItems);
+      setWatchlist(watchItems);
+    } catch (error) {
+      console.error('Error loading user lists:', error);
+    }
+  };
+
+  const loadContent = async () => {
+    try {
+      const contentData = await trickleListObjects('content', 100, true);
+      setContent(contentData.items);
+    } catch (error) {
+      console.error('Error loading content:', error);
+    }
+  };
+
+  const loadCollections = async () => {
+    try {
+      const collectionsData = await trickleListObjects(`collections:${user.objectId}`, 20, true);
+      setCollections(collectionsData.items);
+    } catch (error) {
+      console.error('Error loading collections:', error);
+    }
+  };
+
+  const createCollection = async (name) => {
+    try {
+      await trickleCreateObject(`collections:${user.objectId}`, {
+        userId: user.objectId,
+        name: name,
+        contentIds: [],
+        createdAt: new Date().toISOString()
+      });
+      loadCollections();
+      setShowCreateCollection(false);
+    } catch (error) {
+      console.error('Error creating collection:', error);
+    }
+  };
+
+  const getContentById = (contentId) => {
+    return content.find(item => item.objectId === contentId)?.objectData;
+  };
+
+  try {
+    const currentList = activeTab === 'favorites' ? favorites : 
+                       activeTab === 'watchlist' ? watchlist : collections;
+    
+    return (
+      <div className="max-w-7xl mx-auto px-6" data-name="enhanced-favorites" data-file="components/EnhancedFavorites.js">
+        <h1 className="text-3xl font-bold mb-6">הרשימות שלי</h1>
+        
+        <div className="flex space-x-4 mb-6">
+          <button 
+            className={`px-4 py-2 rounded ${activeTab === 'favorites' ? 'bg-red-600' : 'bg-gray-700'}`}
+            onClick={() => setActiveTab('favorites')}
+          >
+            מועדפים ({favorites.length})
+          </button>
+          <button 
+            className={`px-4 py-2 rounded ${activeTab === 'watchlist' ? 'bg-red-600' : 'bg-gray-700'}`}
+            onClick={() => setActiveTab('watchlist')}
+          >
+            רשימת צפייה ({watchlist.length})
+          </button>
+          <button 
+            className={`px-4 py-2 rounded ${activeTab === 'collections' ? 'bg-red-600' : 'bg-gray-700'}`}
+            onClick={() => setActiveTab('collections')}
+          >
+            אוספים ({collections.length})
+          </button>
+          {activeTab === 'collections' && (
+            <button 
+              className="btn-primary"
+              onClick={() => setShowCreateCollection(true)}
+            >
+              <div className="icon-plus text-sm ml-1"></div>
+              צור אוסף
+            </button>
+          )}
+        </div>
+
+        {activeTab === 'collections' ? (
+          <div>
+            {collections.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="icon-folder text-6xl text-gray-600 mb-4"></div>
+                <p className="text-gray-400">אין אוספים עדיין</p>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {collections.map((collection) => (
+                  <div key={collection.objectId} className="bg-gray-800 rounded-lg p-4">
+                    <h3 className="font-semibold mb-2">{collection.objectData.name}</h3>
+                    <p className="text-gray-400 text-sm">
+                      {collection.objectData.contentIds?.length || 0} תכנים
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div>
+            {currentList.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-400">
+                  {activeTab === 'favorites' ? 'אין תכנים במועדפים' : 'אין תכנים ברשימת הצפייה'}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {currentList.map((item) => {
+                  const contentData = getContentById(item.objectData.contentId);
+                  if (!contentData) return null;
+                  
+                  return (
+                    <div 
+                      key={item.objectId} 
+                      className="content-card"
+                      onClick={() => onPlayContent(contentData)}
+                    >
+                      <img 
+                        src={contentData.thumbnail} 
+                        alt={contentData.title}
+                        className="w-full h-48 object-cover"
+                      />
+                      <div className="p-3">
+                        <h3 className="font-semibold text-sm truncate">{contentData.title}</h3>
+                        <p className="text-xs text-gray-400">{contentData.year}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {showCreateCollection && (
+          <CollectionModal 
+            onClose={() => setShowCreateCollection(false)}
+            onCreate={createCollection}
+          />
+        )}
+      </div>
+    );
+  } catch (error) {
+    console.error('EnhancedFavorites component error:', error);
+    return null;
+  }
+}
+
+function CollectionModal({ onClose, onCreate }) {
+  const [name, setName] = React.useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (name.trim()) {
+      onCreate(name.trim());
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-gray-900 rounded-lg p-6 max-w-md w-full mx-4">
+        <h2 className="text-xl font-bold mb-4">צור אוסף חדש</h2>
+        <form onSubmit={handleSubmit}>
+          <input
+            type="text"
+            placeholder="שם האוסף"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded mb-4"
+            autoFocus
+          />
+          <div className="flex space-x-3">
+            <button type="submit" className="btn-primary flex-1">
+              צור
+            </button>
+            <button type="button" onClick={onClose} className="btn-secondary flex-1">
+              ביטול
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,96 @@
+function EPGGuide({ user }) {
+  const [epgData, setEpgData] = React.useState([]);
+  const [selectedDate, setSelectedDate] = React.useState(new Date().toISOString().split('T')[0]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    if (user) {
+      loadEPGData();
+    }
+  }, [user, selectedDate]);
+
+  const loadEPGData = async () => {
+    try {
+      setLoading(true);
+      const epgResult = await trickleListObjects(`epg_data:${selectedDate}`, 100, true);
+      setEpgData(epgResult.items);
+    } catch (error) {
+      console.error('Error loading EPG data:', error);
+      setEpgData([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatTime = (timeString) => {
+    return timeString ? timeString.substring(0, 5) : '';
+  };
+
+  const groupByChannel = (data) => {
+    const grouped = {};
+    data.forEach(item => {
+      const channel = item.objectData.channel;
+      if (!grouped[channel]) {
+        grouped[channel] = [];
+      }
+      grouped[channel].push(item);
+    });
+    return grouped;
+  };
+
+  try {
+    return (
+      <div className="max-w-7xl mx-auto px-6 pt-20" data-name="epg-guide" data-file="components/EPGGuide.js">
+        <h1 className="text-3xl font-bold mb-6">מדריך תוכניות</h1>
+        
+        <div className="mb-6">
+          <label className="block text-sm font-medium mb-2">בחר תאריך</label>
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="px-4 py-2 bg-gray-800 border border-gray-700 rounded"
+          />
+        </div>
+
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="icon-loader text-4xl text-gray-400 animate-spin mb-4"></div>
+            <p className="text-gray-400">טוען מדריך תוכניות...</p>
+          </div>
+        ) : epgData.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="icon-calendar text-6xl text-gray-600 mb-4"></div>
+            <h2 className="text-xl font-semibold mb-2">אין נתוני תוכניות</h2>
+            <p className="text-gray-400">לא נמצאו תוכניות לתאריך זה</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {Object.entries(groupByChannel(epgData)).map(([channel, programs]) => (
+              <div key={channel} className="bg-gray-800 rounded-lg p-6">
+                <h2 className="text-xl font-bold mb-4">{channel}</h2>
+                <div className="space-y-2">
+                  {programs.map((program, index) => (
+                    <div key={index} className="flex items-center justify-between py-2 border-b border-gray-700 last:border-b-0">
+                      <div>
+                        <div className="font-semibold">{program.objectData.program}</div>
+                        <div className="text-sm text-gray-400">{program.objectData.description}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-mono text-sm">{formatTime(program.objectData.time)}</div>
+                        <div className="text-xs text-gray-500">{program.objectData.duration} דקות</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  } catch (error) {
+    console.error('EPGGuide component error:', error);
+    return null;
+  }
+}

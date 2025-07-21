@@ -1,0 +1,95 @@
+function NotificationsPage({ user, notifications, onUpdate }) {
+  const markAsRead = async (notificationId) => {
+    try {
+      const notification = notifications.find(n => n.objectId === notificationId);
+      if (notification) {
+        await trickleUpdateObject(`notifications:${user.objectId}`, notificationId, {
+          ...notification.objectData,
+          isRead: true
+        });
+        onUpdate();
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      const unreadNotifications = notifications.filter(n => !n.objectData.isRead);
+      for (const notification of unreadNotifications) {
+        await trickleUpdateObject(`notifications:${user.objectId}`, notification.objectId, {
+          ...notification.objectData,
+          isRead: true
+        });
+      }
+      onUpdate();
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+    }
+  };
+
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'new_content': return 'icon-film';
+      case 'recommendation': return 'icon-star';
+      case 'subscription': return 'icon-credit-card';
+      default: return 'icon-bell';
+    }
+  };
+
+  try {
+    return (
+      <div className="max-w-4xl mx-auto px-6" data-name="notifications-page" data-file="components/NotificationsPage.js">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">התראות</h1>
+          {notifications.some(n => !n.objectData.isRead) && (
+            <button 
+              className="btn-secondary text-sm"
+              onClick={markAllAsRead}
+            >
+              סמן הכל כנקרא
+            </button>
+          )}
+        </div>
+
+        {notifications.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="icon-bell text-6xl text-gray-600 mb-4"></div>
+            <h2 className="text-xl font-semibold mb-2">אין התראות חדשות</h2>
+            <p className="text-gray-400">כשיהיו לך התראות, הן יופיעו כאן</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {notifications.map((notification) => (
+              <div 
+                key={notification.objectId}
+                className={`bg-gray-800 rounded-lg p-4 cursor-pointer transition-all ${
+                  !notification.objectData.isRead ? 'border-l-4 border-red-600' : ''
+                }`}
+                onClick={() => markAsRead(notification.objectId)}
+              >
+                <div className="flex items-start">
+                  <div className={`${getNotificationIcon(notification.objectData.type)} text-xl text-gray-400 ml-3 mt-1`}></div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold mb-1">{notification.objectData.title}</h3>
+                    <p className="text-gray-300 text-sm mb-2">{notification.objectData.message}</p>
+                    <div className="text-xs text-gray-500">
+                      {new Date(notification.createdAt).toLocaleDateString('he-IL')}
+                    </div>
+                  </div>
+                  {!notification.objectData.isRead && (
+                    <div className="w-2 h-2 bg-red-600 rounded-full"></div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  } catch (error) {
+    console.error('NotificationsPage component error:', error);
+    return null;
+  }
+}

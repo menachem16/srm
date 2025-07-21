@@ -1,0 +1,113 @@
+import { trickleListObjects, trickleCreateObject, trickleUpdateObject, trickleDeleteObject } from '../utils/database';
+
+function ViewingHistory({ user }) {
+  const [history, setHistory] = React.useState([]);
+  const [content, setContent] = React.useState([]);
+
+  React.useEffect(() => {
+    if (user) {
+      loadHistory();
+      loadContent();
+    }
+  }, [user]);
+
+  const loadHistory = async () => {
+    try {
+      const historyData = await trickleListObjects(`viewing_history:${user.objectId}`, 50, true);
+      setHistory(historyData.items);
+    } catch (error) {
+      console.error('Error loading viewing history:', error);
+    }
+  };
+
+  const loadContent = async () => {
+    try {
+      const contentData = await trickleListObjects('content', 100, true);
+      setContent(contentData.items);
+    } catch (error) {
+      console.error('Error loading content:', error);
+    }
+  };
+
+  const clearHistory = async () => {
+    if (confirm('האם אתה בטוח שברצונך למחוק את כל היסטוריית הצפייה?')) {
+      try {
+        for (const item of history) {
+          await trickleDeleteObject(`viewing_history:${user.objectId}`, item.objectId);
+        }
+        setHistory([]);
+      } catch (error) {
+        console.error('Error clearing history:', error);
+      }
+    }
+  };
+
+  const getContentData = (contentId) => {
+    return content.find(c => c.objectId === contentId)?.objectData;
+  };
+
+  try {
+    return (
+      <div className="max-w-7xl mx-auto px-6" data-name="viewing-history" data-file="components/ViewingHistory.js">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">היסטוריית צפייה</h1>
+          {history.length > 0 && (
+            <button className="btn-secondary" onClick={clearHistory}>
+              <div className="icon-trash text-sm ml-1"></div>
+              נקה היסטוריה
+            </button>
+          )}
+        </div>
+
+        {history.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="icon-clock text-6xl text-gray-600 mb-4"></div>
+            <h2 className="text-xl font-semibold mb-2">אין היסטוריית צפייה</h2>
+            <p className="text-gray-400">התכנים שתצפה בהם יופיעו כאן</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {history.map((item) => {
+              const contentData = getContentData(item.objectData.contentId);
+              if (!contentData) return null;
+              
+              return (
+                <div key={item.objectId} className="bg-gray-800 rounded-lg p-4 flex items-center">
+                  <img 
+                    src={contentData.thumbnail} 
+                    alt={contentData.title}
+                    className="w-20 h-28 object-cover rounded ml-4"
+                  />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-lg">{contentData.title}</h3>
+                    <p className="text-gray-400 text-sm mb-2">{contentData.category} • {contentData.year}</p>
+                    <div className="flex items-center text-sm text-gray-500">
+                      <div className="icon-clock text-sm ml-1"></div>
+                      <span>נצפה ב-{new Date(item.createdAt).toLocaleDateString('he-IL')}</span>
+                    </div>
+                    {item.objectData.watchTime && (
+                      <div className="mt-2">
+                        <div className="bg-gray-700 rounded-full h-2 w-32">
+                          <div 
+                            className="bg-red-600 h-2 rounded-full"
+                            style={{ width: `${(item.objectData.watchTime / contentData.duration) * 100}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-xs text-gray-500 mt-1 block">
+                          {Math.round((item.objectData.watchTime / contentData.duration) * 100)}% הושלם
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  } catch (error) {
+    console.error('ViewingHistory component error:', error);
+    return null;
+  }
+}

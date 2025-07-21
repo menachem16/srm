@@ -1,0 +1,117 @@
+function SearchFilters({ onFilter, categories, years, ratings }) {
+  const [filters, setFilters] = React.useState({
+    searchTerm: '',
+    category: 'all',
+    year: 'all',
+    minRating: 0,
+    contentType: 'all'
+  });
+
+  React.useEffect(() => {
+    onFilter(filters);
+  }, [filters]);
+
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  try {
+    return (
+      <div className="bg-gray-800 rounded-lg p-6 mb-6" data-name="search-filters" data-file="components/SearchFilters.js">
+        <h2 className="text-xl font-bold mb-4">חיפוש וסינון</h2>
+        
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">חיפוש</label>
+            <input
+              type="text"
+              placeholder="שם סרט או סדרה..."
+              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded"
+              value={filters.searchTerm}
+              onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-2">קטגוריה</label>
+            <select
+              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded"
+              value={filters.category}
+              onChange={(e) => handleFilterChange('category', e.target.value)}
+            >
+              <option value="all">כל הקטגוריות</option>
+              <option value="action">אקשן</option>
+              <option value="comedy">קומדיה</option>
+              <option value="drama">דרמה</option>
+              <option value="horror">אימה</option>
+              <option value="romance">רומנטי</option>
+              <option value="documentary">דוקומנטרי</option>
+              <option value="kids">ילדים</option>
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-2">שנה</label>
+            <select
+              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded"
+              value={filters.year}
+              onChange={(e) => handleFilterChange('year', e.target.value)}
+            >
+              <option value="all">כל השנים</option>
+              <option value="2024">2024</option>
+              <option value="2023">2023</option>
+              <option value="2022">2022</option>
+              <option value="2021">2021</option>
+              <option value="2020">2020</option>
+              <option value="2019">2019</option>
+              <option value="2018">2018</option>
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium mb-2">דירוג מינימלי</label>
+            <select
+              className="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded"
+              value={filters.minRating}
+              onChange={(e) => handleFilterChange('minRating', parseInt(e.target.value))}
+            >
+              <option value="0">כל הדירוגים</option>
+              <option value="5">5+ כוכבים</option>
+              <option value="6">6+ כוכבים</option>
+              <option value="7">7+ כוכבים</option>
+              <option value="8">8+ כוכבים</option>
+              <option value="9">9+ כוכבים</option>
+            </select>
+          </div>
+        </div>
+        
+        <div className="mt-4">
+          <label className="block text-sm font-medium mb-2">סוג תוכן</label>
+          <div className="flex space-x-4">
+            <button
+              className={`px-4 py-2 rounded ${filters.contentType === 'all' ? 'bg-red-600' : 'bg-gray-700'}`}
+              onClick={() => handleFilterChange('contentType', 'all')}
+            >
+              הכל
+            </button>
+            <button
+              className={`px-4 py-2 rounded ${filters.contentType === 'regular' ? 'bg-red-600' : 'bg-gray-700'}`}
+              onClick={() => handleFilterChange('contentType', 'regular')}
+            >
+              תוכן רגיל
+            </button>
+            <button
+              className={`px-4 py-2 rounded ${filters.contentType === 'iptv' ? 'bg-red-600' : 'bg-gray-700'}`}
+              onClick={() => handleFilterChange('contentType', 'iptv')}
+            >
+              IPTV
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  } catch (error) {
+    console.error('SearchFilters component error:', error);
+    return null;
+  }
+}
