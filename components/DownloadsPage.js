@@ -1,4 +1,4 @@
-import { trickleListObjects, trickleCreateObject, trickleUpdateObject, trickleDeleteObject } from '../utils/database';
+// אין צורך ב-import, כל הפונקציות זמינות גלובלית
 
 function DownloadsPage({ user }) {
   const [downloads, setDownloads] = React.useState([]);

@@ -1,4 +1,4 @@
-import { trickleListObjects, trickleCreateObject, trickleUpdateObject, trickleDeleteObject } from '../utils/database';
+// אין צורך ב-import, כל הפונקציות זמינות גלובלית
 
 function FavoritesPage({ user }) {
   const [activeTab, setActiveTab] = React.useState('favorites');

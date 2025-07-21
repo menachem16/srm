@@ -1,4 +1,4 @@
-import { trickleListObjects, trickleCreateObject, trickleUpdateObject, trickleDeleteObject } from './database';
+// אין צורך ב-import, כל הפונקציות זמינות גלובלית
 
 const RecommendationUtils = {
   generatePersonalizedRecommendations: async (user, allContent) => {

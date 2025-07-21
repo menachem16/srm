@@ -1,4 +1,4 @@
-import { trickleListObjects, trickleCreateObject, trickleUpdateObject, trickleDeleteObject } from '../utils/database';
+// אין צורך ב-import, כל הפונקציות זמינות גלובלית
 
 function WatchQueuePage({ user, content }) {
   const [queue, setQueue] = React.useState([]);
