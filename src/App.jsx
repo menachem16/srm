@@ -16,6 +16,7 @@ import PersonalPlaylist from './components/PersonalPlaylist'
 import ReviewSystem from './components/ReviewSystem'
 import IPTVPlayer from './components/IPTVPlayer'
 import AuthModal from './components/AuthModal'
+import { trickleListObjects } from './utils/database';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -39,7 +40,7 @@ function App() {
     try {
       // Add delay and reduce limit to prevent rate limiting
       await new Promise(resolve => setTimeout(resolve, 200));
-      const notifData = await window.trickleListObjects(`notifications:${user.objectId}`, 20, true);
+      const notifData = await trickleListObjects(`notifications:${user.objectId}`, 20, true);
       
       if (notifData && notifData.items) {
         setNotifications(notifData.items);

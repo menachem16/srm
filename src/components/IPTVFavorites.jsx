@@ -1,4 +1,5 @@
 import React from 'react';
+import { trickleListObjects, trickleDeleteObject } from '../utils/database';
 
 function IPTVFavorites({ user, onPlayChannel }) {
   const [favorites, setFavorites] = React.useState([]);
@@ -13,7 +14,7 @@ function IPTVFavorites({ user, onPlayChannel }) {
   const loadFavorites = async () => {
     try {
       setLoading(true);
-      const favData = await window.trickleListObjects(`iptv_favorites:${user.objectId}`, 100, true);
+      const favData = await trickleListObjects(`iptv_favorites:${user.objectId}`, 100, true);
       setFavorites(favData.items);
     } catch (error) {
       console.error('Error loading favorites:', error);
@@ -24,7 +25,7 @@ function IPTVFavorites({ user, onPlayChannel }) {
 
   const removeFavorite = async (favoriteId) => {
     try {
-      await window.trickleDeleteObject(`iptv_favorites:${user.objectId}`, favoriteId);
+      await trickleDeleteObject(`iptv_favorites:${user.objectId}`, favoriteId);
       loadFavorites();
     } catch (error) {
       console.error('Error removing favorite:', error);
