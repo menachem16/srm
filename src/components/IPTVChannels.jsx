@@ -19,6 +19,7 @@ function IPTVChannels({ user, onPlayChannel }) {
   const [searchTerm, setSearchTerm] = React.useState('');
   const [showConnectionStatus, setShowConnectionStatus] = React.useState(false);
   const [abortController, setAbortController] = React.useState(null);
+  const [contentType, setContentType] = React.useState('live'); // 'live' or 'vod'
 
   React.useEffect(() => {
     if (user) {
@@ -28,9 +29,9 @@ function IPTVChannels({ user, onPlayChannel }) {
 
   React.useEffect(() => {
     if (selectedSubscription) {
-      loadChannels(selectedSubscription);
+      loadChannels(selectedSubscription, contentType);
     }
-  }, [selectedSubscription]);
+  }, [selectedSubscription, contentType]);
 
   React.useEffect(() => {
     filterChannels();
@@ -65,7 +66,7 @@ function IPTVChannels({ user, onPlayChannel }) {
     }
   };
 
-  const loadChannels = async (subscription) => {
+  const loadChannels = async (subscription, type = 'live') => {
     if (abortController) {
       abortController.abort();
     }
@@ -81,7 +82,7 @@ function IPTVChannels({ user, onPlayChannel }) {
     setCategories(['כל הקטגוריות']);
     setShowConnectionStatus(true);
     try {
-      console.log('Loading channels for subscription:', subscription?.objectData?.subscriptionName);
+      console.log('Loading channels for subscription:', subscription?.objectData?.subscriptionName, 'type:', type);
       const progressCallback = (step, progress) => {
         if (!newAbortController.signal.aborted) {
           setLoadingState(prev => ({
@@ -92,21 +93,31 @@ function IPTVChannels({ user, onPlayChannel }) {
         }
       };
       let liveStreams = [];
+      let xtreamSuccess = false;
       try {
-        progressCallback('מנסה Xtream API...', 10);
-        liveStreams = await IPTVApi.retryWithBackoff(
-          () => IPTVApi.fetchXtreamChannels(subscription?.objectData, progressCallback),
-          2,
-          1000
-        );
-        if (liveStreams && liveStreams.length > 0) {
-          console.log(`Success with Xtream API: ${liveStreams.length} channels`);
-          progressCallback('הצליח עם Xtream API', 60);
+        progressCallback(type === 'vod' ? 'מנסה Xtream API (VOD)...' : 'מנסה Xtream API...', 10);
+        if (type === 'vod') {
+          liveStreams = await IPTVApi.retryWithBackoff(
+            () => IPTVApi.fetchXtreamVODStreams(subscription?.objectData, progressCallback),
+            2,
+            1000
+          );
         } else {
-          throw new Error('No channels from Xtream API');
+          liveStreams = await IPTVApi.retryWithBackoff(
+            () => IPTVApi.fetchXtreamChannels(subscription?.objectData, progressCallback),
+            2,
+            1000
+          );
+        }
+        if (Array.isArray(liveStreams) && liveStreams.length > 0) {
+          xtreamSuccess = true;
+          console.log(`Success with Xtream API: ${liveStreams.length} items`);
+          progressCallback('הצליח עם Xtream API', 60);
         }
       } catch (xtreamError) {
         console.log(`Xtream API failed: ${xtreamError.message}, trying M3U playlist`);
+      }
+      if (!xtreamSuccess) {
         try {
           progressCallback('מנסה M3U playlist...', 50);
           const m3uData = await IPTVApi.retryWithBackoff(
@@ -117,10 +128,10 @@ function IPTVChannels({ user, onPlayChannel }) {
           if (m3uData && typeof m3uData === 'string') {
             liveStreams = IPTVApi.parseM3U(m3uData);
             if (liveStreams && liveStreams.length > 0) {
-              console.log(`Success with M3U playlist: ${liveStreams.length} channels`);
+              console.log(`Success with M3U playlist: ${liveStreams.length} items`);
               progressCallback('הצליח עם M3U playlist', 70);
             } else {
-              throw new Error('No channels parsed from M3U data');
+              throw new Error('No items parsed from M3U data');
             }
           } else {
             throw new Error('Invalid M3U data format');
@@ -133,26 +144,29 @@ function IPTVChannels({ user, onPlayChannel }) {
       if (newAbortController.signal.aborted) return;
       progressCallback('מעבד נתונים...', 90);
       const formattedChannels = liveStreams.map((stream, index) => {
-        const streamId = stream.id || stream.stream_id || `channel_${index}`;
+        const streamId = stream.id || stream.stream_id || `item_${index}`;
         let streamUrl = '';
         try {
-          streamUrl = IPTVApi.generateStreamUrl(subscription?.objectData, streamId, 'live');
+          streamUrl = IPTVApi.generateStreamUrl(subscription?.objectData, streamId, type);
         } catch (urlError) {
-          console.warn('Failed to generate stream URL for channel:', stream.name, urlError.message);
+          console.warn('Failed to generate stream URL for item:', stream.name, urlError.message);
           streamUrl = stream.url || '';
         }
         return {
           id: streamId,
-          name: stream.name || `ערוץ ${index + 1}`,
+          name: stream.name || stream.title || `פריט ${index + 1}`,
           streamId: streamId,
-          logo: stream.logo || stream.stream_icon || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA4MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjQwIiB5PSIzNSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+VFY8L3RleHQ+Cjwvc3ZnPgo=',
+          logo: stream.logo || stream.stream_icon || stream.cover || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA4MCA2MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjYwIiBmaWxsPSIjMzMzMzMzIi8+Cjx0ZXh0IHg9IjQwIiB5PSIzNSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjEyIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+VFY8L3RleHQ+Cjwvc3ZnPgo=',
           category: stream.category || stream.category_name || 'כללי',
           url: streamUrl,
-          country: stream.country || 'Unknown'
+          country: stream.country || 'Unknown',
+          isVOD: type === 'vod',
+          description: stream.description || '',
+          year: stream.year || '',
         };
       });
       if (newAbortController.signal.aborted) return;
-      console.log('Successfully loaded channels:', formattedChannels.length);
+      console.log('Successfully loaded items:', formattedChannels.length);
       setChannels(formattedChannels);
       const liveCategories = await IPTVApi.getLiveCategories(formattedChannels);
       const categoryNames = liveCategories.map(cat => cat.category_name);
@@ -166,14 +180,14 @@ function IPTVChannels({ user, onPlayChannel }) {
       }));
     } catch (error) {
       if (!newAbortController.signal.aborted) {
-        console.error('Error loading channels:', error);
+        console.error('Error loading items:', error);
         setChannels([]);
         setCategories(['כל הקטגוריות']);
         setLoadingState({
           isLoading: false,
           currentStep: 'שגיאה',
           progress: 0,
-          error: `שגיאה בטעינת ערוצים: ${error.message}`
+          error: `שגיאה בטעינת פריטים: ${error.message}`
         });
       }
     } finally {
@@ -202,10 +216,10 @@ function IPTVChannels({ user, onPlayChannel }) {
     const streamUrl = IPTVApi.generateStreamUrl(
       selectedSubscription?.objectData,
       channel.streamId || channel.id,
-      'live'
+      channel.isVOD ? 'vod' : 'live'
     );
     const videoData = {
-      type: 'channel',
+      type: channel.isVOD ? 'vod' : 'channel',
       data: {
         ...channel,
         url: streamUrl
@@ -280,6 +294,20 @@ function IPTVChannels({ user, onPlayChannel }) {
       <div className="max-w-7xl mx-auto px-6" data-name="iptv-channels" data-file="components/IPTVChannels.js">
         <h1 className="text-3xl font-bold mb-6">שידורים חיים</h1>
         <CORSHelper />
+        <div className="mb-6 flex gap-4">
+          <button
+            className={`px-4 py-2 rounded ${contentType === 'live' ? 'bg-red-600' : 'bg-gray-700'}`}
+            onClick={() => setContentType('live')}
+          >
+            שידורים חיים
+          </button>
+          <button
+            className={`px-4 py-2 rounded ${contentType === 'vod' ? 'bg-red-600' : 'bg-gray-700'}`}
+            onClick={() => setContentType('vod')}
+          >
+            VOD
+          </button>
+        </div>
         {subscriptions.length === 0 ? (
           <div className="text-center py-12">
             <div className="icon-tv text-6xl text-gray-600 mb-4"></div>
@@ -369,7 +397,7 @@ function IPTVChannels({ user, onPlayChannel }) {
                 <div className="space-y-2">
                   <button
                     className="btn-primary"
-                    onClick={() => selectedSubscription && loadChannels(selectedSubscription)}
+                    onClick={() => selectedSubscription && loadChannels(selectedSubscription, contentType)}
                   >
                     נסה שוב
                   </button>
@@ -392,7 +420,7 @@ function IPTVChannels({ user, onPlayChannel }) {
                 </p>
                 <button
                   className="btn-primary"
-                  onClick={() => selectedSubscription && loadChannels(selectedSubscription)}
+                  onClick={() => selectedSubscription && loadChannels(selectedSubscription, contentType)}
                 >
                   נסה שוב
                 </button>

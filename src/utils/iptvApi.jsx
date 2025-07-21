@@ -178,5 +178,29 @@ const IPTVApi = {
   getLiveCategories: async (channels) => {
     const categories = [...new Set(channels.map(ch => ch.category))];
     return categories.map(cat => ({ category_name: cat }));
+  },
+
+  fetchXtreamVODStreams: async (subscription, progressCallback) => {
+    if (!subscription?.url || !subscription?.username || !subscription?.password) {
+      throw new Error('Missing subscription credentials');
+    }
+    progressCallback('מתחבר לשרת Xtream API (VOD)...', 20);
+    const baseUrl = subscription.url.replace(/\/$/, '');
+    const apiUrl = `${baseUrl}/player_api.php?username=${subscription.username}&password=${subscription.password}&action=get_vod_streams`;
+    try {
+      const response = await IPTVApi.tryBothProtocols(apiUrl);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      const data = await response.json();
+      progressCallback('קיבל נתוני VOD מהשרת...', 40);
+      if (!data || !Array.isArray(data)) {
+        throw new Error('Invalid VOD response from server');
+      }
+      return data;
+    } catch (error) {
+      console.error('IPTV VOD API Error:', error);
+      throw new Error('לא ניתן לטעון תכני VOD מהשרת');
+    }
   }
 };
