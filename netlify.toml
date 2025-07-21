@@ -1,6 +1,6 @@
 [build]
-  publish = "."
-  command = "echo 'Static site ready'"
+  publish = "dist"
+  command = "npm run build"
 
 [[headers]]
   for = "/*"
@@ -14,6 +14,11 @@
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
   status = 200
 
 [settings]

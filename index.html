@@ -1,105 +1,13 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Netflix Clone - IPTV Platform</title>
-    <meta name="description" content="פלטפורמת IPTV מתקדמת עם ערוצים חיים וסרטים">
-    <meta name="keywords" content="IPTV, streaming, movies, TV channels, entertainment">
-    <meta property="og:title" content="Netflix Clone - IPTV Platform">
-    <meta property="og:description" content="פלטפורמת IPTV מתקדמת עם ערוצים חיים וסרטים">
-    <meta name="twitter:title" content="Netflix Clone - IPTV Platform">
-    <meta name="twitter:description" content="פלטפורמת IPTV מתקדמת עם ערוצים חיים וסרטים">
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📺</text></svg>">
-    <link rel="icon" type="image/png" sizes="32x32" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📺</text></svg>">
-    <link rel="icon" type="image/png" sizes="16x16" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📺</text></svg>">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📺</text></svg>">
-    
-    <script src="https://resource.trickle.so/vendor_lib/unpkg/react@18/umd/react.production.min.js"></script>
-    <script src="https://resource.trickle.so/vendor_lib/unpkg/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://resource.trickle.so/vendor_lib/unpkg/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react-player@2.12.0/dist/ReactPlayer.standalone.js"></script>
-    <link href="https://resource.trickle.so/vendor_lib/unpkg/lucide-static@0.516.0/font/lucide.css" rel="stylesheet">
-    
-    <style type="text/tailwindcss">
-        @layer base {
-            body {
-                @apply bg-gray-900 text-white font-sans;
-            }
-        }
-        
-        @layer utilities {
-            .content-card {
-                @apply bg-gray-800 rounded-lg overflow-hidden shadow-lg transition-transform duration-200 hover:scale-105;
-            }
-            
-        .responsive-grid {
-            @apply grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4;
-        }
-        
-        .nav-link {
-            @apply px-4 py-2 rounded hover:bg-gray-700 transition-colors;
-        }
-        
-        .btn-primary {
-            @apply px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-colors;
-        }
-        
-        .btn-secondary {
-            @apply px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded transition-colors;
-        }
-        }
-    </style>
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IPTV Stream</title>
+  </head>
+  <body class="bg-gray-900 text-white">
     <div id="root"></div>
-    
-    <!-- Firebase App (core) -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <!-- Firebase Auth -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    <script>
-      // הדבק כאן את ה־config שלך
-      const firebaseConfig = {
-        apiKey: "AIzaSyDbSvcjAchGzTnd0rspOzo7Sz43pUFiv3c",
-        authDomain: "stream-43b96.firebaseapp.com",
-        projectId: "stream-43b96",
-        storageBucket: "stream-43b96.firebasestorage.app",
-        messagingSenderId: "370958116385",
-        appId: "1:370958116385:web:71ac900d9f6a6c3cb16560",
-        measurementId: "G-F6B5FZBNFR"
-        };
-      firebase.initializeApp(firebaseConfig);
-    </script>
-    <script type="text/babel" src="utils/database.js"></script>
-    <script type="text/babel" src="utils/auth.js"></script>
-    <script type="text/babel" src="utils/securityUtils.js"></script>
-    <script type="text/babel" src="utils/performanceUtils.js"></script>
-    <script type="text/babel" src="utils/iptvApi.js"></script>
-    <script type="text/babel" src="components/Navbar.js"></script>
-    <script type="text/babel" src="components/AuthModal.js"></script>
-    <script type="text/babel" src="components/CORSHelper.js"></script>
-    <script type="text/babel" src="components/IPTVSetup.js"></script>
-    <script type="text/babel" src="components/IPTVChannels.js"></script>
-    <script type="text/babel" src="components/IPTVPlayer.js"></script>
-    <script type="text/babel" src="components/IPTVFavorites.js"></script>
-    <script type="text/babel" src="components/EPGGuide.js"></script>
-    <script type="text/babel" src="components/RecordingManager.js"></script>
-    <script type="text/babel" src="components/SmartRecommendations.js"></script>
-    <script type="text/babel" src="components/ConnectionStatus.js"></script>
-    <script type="text/babel" src="components/ChannelRatings.js"></script>
-    <script type="text/babel" src="components/NotificationSystem.js"></script>
-    <script type="text/babel" src="components/ParentalControls.js"></script>
-    <script type="text/babel" src="components/UserProfile.js"></script>
-    <script type="text/babel" src="components/AdminPanel.js"></script>
-    <script type="text/babel" src="components/AdvancedRecommendations.js"></script>
-    <script type="text/babel" src="components/RealTimeNotifications.js"></script>
-    <script type="text/babel" src="components/ReviewSystem.js"></script>
-    <script type="text/babel" src="components/PersonalPlaylist.js"></script>
-    <script type="text/babel" src="components/Hero.js"></script>
-    <script type="text/babel" src="app.js"></script>
-</body>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>
