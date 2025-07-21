@@ -32,4 +32,13 @@ export function trickleDeleteObject(key, objectId) {
   data.items = data.items.filter(item => item.objectId !== objectId);
   localStorage.setItem(key, JSON.stringify(data));
   return Promise.resolve();
+}
+
+export function trickleGetObject(key, objectId) {
+  const data = JSON.parse(localStorage.getItem(key) || '{"items":[]}');
+  const obj = data.items.find(item => item.objectId === objectId);
+  if (obj) {
+    return Promise.resolve(obj);
+  }
+  return Promise.reject(new Error('Object not found'));
 } 
