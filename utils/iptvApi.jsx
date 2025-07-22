@@ -2,7 +2,8 @@ export const IPTVApi = {
   getProxyUrl: (url) => {
     // This function constructs the full URL to your Cloudflare proxy worker.
     // It is essential for fetching content while avoiding CORS issues.
-    return `https://iptv-proxy.kingtvland.workers.dev/${url}`;
+    // We pass the target URL as a query parameter to be more robust.
+    return `https://iptv-proxy.kingtvland.workers.dev/?url=${encodeURIComponent(url)}`;
   },
   
   // Retry mechanism with exponential backoff
