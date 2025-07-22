@@ -2,7 +2,8 @@ export const IPTVApi = {
   getProxyUrl: (url) => {
     // This function constructs the full URL to your Cloudflare proxy worker.
     // It is essential for fetching content while avoiding CORS issues.
-    return `https://iptv-proxy.kingtvland.workers.dev/${url}`;
+    // We pass the target URL as a query parameter to be more robust.
+    return `https://iptv-proxy.kingtvland.workers.dev/?url=${encodeURIComponent(url)}`;
   },
   
   // Retry mechanism with exponential backoff
@@ -96,7 +97,7 @@ fetchWithTimeout: async (url, options = {}, timeout = 60000) => {
     const apiUrl = `${baseUrl}/player_api.php?username=${subscription.username}&password=${subscription.password}&action=get_live_streams`;
     const proxiedApiUrl = IPTVApi.getProxyUrl(apiUrl);
     try {
-      const response = await IPTVApi.fetchWithTimeout(proxiedApiUrl, {}, 30000);
+      const response = await IPTVApi.fetchWithTimeout(proxiedApiUrl, {}, 90000); // Increased timeout
       const text = await response.text();
       if (IPTVApi.isHtmlError(text)) {
         throw new Error('שרת ה-IPTV לא מגיב או חוסם גישה (HTML error)');
@@ -131,7 +132,7 @@ fetchWithTimeout: async (url, options = {}, timeout = 60000) => {
     const proxiedM3uUrl = IPTVApi.getProxyUrl(m3uUrl);
     
     try {
-      const response = await IPTVApi.fetchWithTimeout(proxiedM3uUrl, {}, 30000);
+      const response = await IPTVApi.fetchWithTimeout(proxiedM3uUrl, {}, 90000); // Increased timeout
       const m3uData = await response.text();
       if (IPTVApi.isHtmlError(m3uData)) {
         throw new Error('שרת ה-IPTV לא מגיב או חוסם גישה (HTML error)');
@@ -197,7 +198,8 @@ fetchWithTimeout: async (url, options = {}, timeout = 60000) => {
     } else if (type === 'series') {
       url = `${baseUrl}/series/${subscription.username}/${subscription.password}/${streamId}.mp4`;
     }
-    return `/proxy/${encodeURIComponent(url)}`;
+    // Use the central getProxyUrl function to ensure consistency
+    return IPTVApi.getProxyUrl(url);
   },
 
   // Get live categories
@@ -264,7 +266,7 @@ export async function tryAllConnectionMethods(subscription, type = 'live', progr
     methods.map(m =>
       Promise.race([
         m.fn(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 30000))
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 90000)) // Increased timeout
       ]).then(
         res => ({ name: m.name, data: res }),
         err => ({ name: m.name, error: err })
