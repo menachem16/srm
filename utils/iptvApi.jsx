@@ -97,7 +97,7 @@ fetchWithTimeout: async (url, options = {}, timeout = 60000) => {
     const apiUrl = `${baseUrl}/player_api.php?username=${subscription.username}&password=${subscription.password}&action=get_live_streams`;
     const proxiedApiUrl = IPTVApi.getProxyUrl(apiUrl);
     try {
-      const response = await IPTVApi.fetchWithTimeout(proxiedApiUrl, {}, 90000); // Increased timeout
+      const response = await IPTVApi.fetchWithTimeout(proxiedApiUrl, {}, 180000); // Increased timeout to 3 minutes
       const text = await response.text();
       if (IPTVApi.isHtmlError(text)) {
         throw new Error('שרת ה-IPTV לא מגיב או חוסם גישה (HTML error)');
@@ -132,7 +132,7 @@ fetchWithTimeout: async (url, options = {}, timeout = 60000) => {
     const proxiedM3uUrl = IPTVApi.getProxyUrl(m3uUrl);
     
     try {
-      const response = await IPTVApi.fetchWithTimeout(proxiedM3uUrl, {}, 90000); // Increased timeout
+      const response = await IPTVApi.fetchWithTimeout(proxiedM3uUrl, {}, 180000); // Increased timeout to 3 minutes
       const m3uData = await response.text();
       if (IPTVApi.isHtmlError(m3uData)) {
         throw new Error('שרת ה-IPTV לא מגיב או חוסם גישה (HTML error)');
@@ -266,7 +266,7 @@ export async function tryAllConnectionMethods(subscription, type = 'live', progr
     methods.map(m =>
       Promise.race([
         m.fn(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 90000)) // Increased timeout
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 180000)) // Increased timeout to 3 minutes
       ]).then(
         res => ({ name: m.name, data: res }),
         err => ({ name: m.name, error: err })
